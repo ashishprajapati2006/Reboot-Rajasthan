@@ -126,24 +126,6 @@ curl http://localhost:3002/health
 curl http://localhost:8000
 ```
 
-### Service Ports
-
-| Service | Port | URL |
-|---------|------|-----|
-| Auth Service | 3001 | http://localhost:3001 |
-| Detection Service | 3002 | http://localhost:3002 |
-| Task Service | 3003 | http://localhost:3003 |
-| Geofence Service | 3004 | http://localhost:3004 |
-| RTI Service | 3005 | http://localhost:3005 |
-| Analytics Service | 3006 | http://localhost:3006 |
-| Kong Gateway | 8000 | http://localhost:8000 |
-| Kong Admin | 8001 | http://localhost:8001 |
-| PostgreSQL | 5432 | localhost:5432 |
-| Redis | 6379 | localhost:6379 |
-| RabbitMQ | 5672, 15672 | http://localhost:15672 |
-
----
-
 ## 🔧 Development
 
 ### Running Services Individually
