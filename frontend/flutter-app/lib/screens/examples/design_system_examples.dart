@@ -128,10 +128,7 @@ class HomeScreenExample extends StatelessWidget {
                       icon: Icons.verified_user,
                       color: AppColors.accentOrange,
                       onPressed: () {
-                        AppSnackBar.show(
-                          context,
-                          message: 'Opening Verification...',
-                        );
+                        Navigator.pushNamed(context, '/worker-verification');
                       },
                     ),
                   ],

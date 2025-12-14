@@ -259,9 +259,18 @@ Content-Type: multipart/form-data
   "image": <file>,
   "latitude": 26.9124,
   "longitude": 75.7873,
-  "device_id": "device-12345",
   "timestamp": "2024-01-15T10:30:00Z",
-  "sensor_data": "{\"accelerometer\": {...}, \"light\": 850}"
+  "device_id": "device-12345",
+  "accelerometer_x": 0.245,
+  "accelerometer_y": -0.156,
+  "accelerometer_z": 9.812,
+  "gyroscope_x": 0.015,
+  "gyroscope_y": -0.023,
+  "gyroscope_z": 0.008,
+  "light_level": 850.5,
+  "magnetometer_x": 12.5,
+  "magnetometer_y": -8.3,
+  "magnetometer_z": 42.1
 }
 ```
 
@@ -309,16 +318,49 @@ Content-Type: multipart/form-data
       "longitude": 75.7873
     }
   },
+  "sensor_readings": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "date": "2024-01-15",
+    "time": "10:30:00",
+    "accelerometer": {
+      "x": 0.245,
+      "y": -0.156,
+      "z": 9.812,
+      "unit": "m/s²"
+    },
+    "gyroscope": {
+      "x": 0.015,
+      "y": -0.023,
+      "z": 0.008,
+      "unit": "rad/s"
+    },
+    "magnetometer": {
+      "x": 12.5,
+      "y": -8.3,
+      "z": 42.1,
+      "unit": "µT"
+    },
+    "light_sensor": {
+      "value": 850.5,
+      "unit": "lux"
+    }
+  },
   "metadata": {
     "device_id": "device-12345",
     "timestamp": "2024-01-15T10:30:00Z",
     "submission_count_hourly": 1,
+    "image_url": "https://storage.googleapis.com/bucket/issue-uuid.jpg",
     "exif_data": {
       "datetime": "2024:01:15 10:28:30",
+      "date": "2024-01-15",
+      "time": "10:28:30",
       "make": "Apple",
       "model": "iPhone 13 Pro",
       "gps_latitude": "26.9124",
-      "gps_longitude": "75.7873"
+      "gps_longitude": "75.7873",
+      "gps_altitude": "200.5",
+      "focal_length": "4.2",
+      "flash": "Off"
     }
   }
 }
@@ -649,25 +691,481 @@ All error responses follow this format:
 
 ---
 
-## Postman Collection
+## 🗄️ Database Schemas
 
-Import this collection for easy testing:
+### Issues Collection/Table
 
-[Download Postman Collection](./postman_collection.json)
+```sql
+CREATE TABLE issues (
+  id UUID PRIMARY KEY,
+  reported_by UUID NOT NULL REFERENCES users(id),
+  
+  -- Issue Classification
+  issue_type VARCHAR(50) NOT NULL, -- POTHOLE, STREETLIGHT_FAILURE, etc.
+  severity VARCHAR(20) NOT NULL, -- CRITICAL, HIGH, MEDIUM, LOW
+  status VARCHAR(30) NOT NULL, -- PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, VERIFIED
+  
+  -- Location Data
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  address VARCHAR(255),
+  geofence_id UUID REFERENCES geofences(id),
+  
+  -- Image & Media
+  image_url VARCHAR(500) NOT NULL,
+  image_path VARCHAR(500),
+  image_size_kb INT,
+  image_dimensions JSON, -- {"width": 1920, "height": 1080}
+  image_hash VARCHAR(64), -- For duplicate detection
+  
+  -- Timestamp Data
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  reported_date DATE NOT NULL,
+  reported_time TIME NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  -- Sensor Readings at Capture
+  sensor_readings JSON, -- Complete sensor data object
+  accelerometer_x DECIMAL(8, 6),
+  accelerometer_y DECIMAL(8, 6),
+  accelerometer_z DECIMAL(8, 6),
+  gyroscope_x DECIMAL(8, 6),
+  gyroscope_y DECIMAL(8, 6),
+  gyroscope_z DECIMAL(8, 6),
+  magnetometer_x DECIMAL(8, 2),
+  magnetometer_y DECIMAL(8, 2),
+  magnetometer_z DECIMAL(8, 2),
+  light_level DECIMAL(8, 2),
+  
+  -- EXIF Data
+  exif_data JSON, -- {datetime, date, time, camera_make, camera_model, focal_length, etc.}
+  device_id VARCHAR(100),
+  device_model VARCHAR(100),
+  device_make VARCHAR(100),
+  app_version VARCHAR(20),
+  
+  -- Detection Confidence
+  detection_confidence DECIMAL(4, 3), -- 0.000 - 1.000
+  fraud_risk_score DECIMAL(4, 3),
+  fraud_risk_level VARCHAR(20), -- LOW, MEDIUM, HIGH
+  
+  -- Geo Validation
+  gps_valid BOOLEAN DEFAULT true,
+  gps_spoofing_suspected BOOLEAN DEFAULT false,
+  
+  -- Community Engagement
+  upvotes INT DEFAULT 0,
+  downvotes INT DEFAULT 0,
+  net_votes INT DEFAULT 0,
+  comment_count INT DEFAULT 0,
+  
+  -- Assignment Info
+  assigned_to UUID REFERENCES workers(id),
+  assigned_at TIMESTAMP,
+  priority INT, -- 1-10 priority score
+  
+  -- Completion Tracking
+  completed_at TIMESTAMP,
+  verified_at TIMESTAMP,
+  verification_confidence DECIMAL(4, 3),
+  
+  -- Indexing
+  INDEX idx_reported_by (reported_by),
+  INDEX idx_status (status),
+  INDEX idx_issue_type (issue_type),
+  INDEX idx_severity (severity),
+  INDEX idx_location (latitude, longitude),
+  INDEX idx_created_at (created_at),
+  INDEX idx_geofence (geofence_id),
+  INDEX idx_assigned_to (assigned_to)
+);
+```
 
----
+### Issues Sensor Data Extended Table
 
-## WebSocket API (Coming Soon)
+```sql
+CREATE TABLE issue_sensor_readings (
+  id UUID PRIMARY KEY,
+  issue_id UUID NOT NULL REFERENCES issues(id) ON DELETE CASCADE,
+  
+  -- Timestamp
+  timestamp TIMESTAMP NOT NULL,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  
+  -- Accelerometer (m/s²)
+  accelerometer_x DECIMAL(8, 6) NOT NULL,
+  accelerometer_y DECIMAL(8, 6) NOT NULL,
+  accelerometer_z DECIMAL(8, 6) NOT NULL,
+  accelerometer_magnitude DECIMAL(8, 6),
+  
+  -- Gyroscope (rad/s)
+  gyroscope_x DECIMAL(8, 6),
+  gyroscope_y DECIMAL(8, 6),
+  gyroscope_z DECIMAL(8, 6),
+  gyroscope_magnitude DECIMAL(8, 6),
+  
+  -- Magnetometer (µT - Microtesla)
+  magnetometer_x DECIMAL(8, 2),
+  magnetometer_y DECIMAL(8, 2),
+  magnetometer_z DECIMAL(8, 2),
+  magnetometer_magnitude DECIMAL(8, 2),
+  
+  -- Light Sensor (lux)
+  light_level DECIMAL(10, 2) NOT NULL,
+  
+  -- Additional Environmental
+  temperature DECIMAL(5, 2), -- Celsius
+  humidity DECIMAL(5, 2), -- Percentage
+  pressure DECIMAL(8, 2), -- hPa
+  
+  -- Device Info
+  device_id VARCHAR(100),
+  
+  -- Data Quality
+  sensor_accuracy VARCHAR(20), -- HIGH, MEDIUM, LOW
+  calibration_needed BOOLEAN DEFAULT false,
+  
+  INDEX idx_issue_id (issue_id),
+  INDEX idx_timestamp (timestamp)
+);
+```
 
-Real-time updates for:
-- Task status changes
-- New issue notifications
-- Worker location tracking
-- Community voting results
+### Tasks Table
 
----
+```sql
+CREATE TABLE tasks (
+  id UUID PRIMARY KEY,
+  issue_id UUID NOT NULL REFERENCES issues(id),
+  worker_id UUID NOT NULL REFERENCES workers(id),
+  
+  -- Task Status & Timeline
+  status VARCHAR(30) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_date DATE NOT NULL,
+  created_time TIME NOT NULL,
+  assigned_at TIMESTAMP,
+  started_at TIMESTAMP,
+  started_date DATE,
+  started_time TIME,
+  completed_at TIMESTAMP,
+  completed_date DATE,
+  completed_time TIME,
+  deadline TIMESTAMP,
+  
+  -- Location Verification
+  location_latitude DECIMAL(10, 8),
+  location_longitude DECIMAL(11, 8),
+  geofence_verified BOOLEAN DEFAULT false,
+  geofence_verified_at TIMESTAMP,
+  
+  -- Performance Metrics
+  time_taken_minutes INT,
+  
+  -- Before/After Images
+  before_image_url VARCHAR(500),
+  after_image_url VARCHAR(500),
+  before_image_timestamp TIMESTAMP,
+  after_image_timestamp TIMESTAMP,
+  
+  -- Sensor Readings at Completion
+  completion_sensor_readings JSON,
+  completion_accelerometer_x DECIMAL(8, 6),
+  completion_accelerometer_y DECIMAL(8, 6),
+  completion_accelerometer_z DECIMAL(8, 6),
+  completion_gyroscope_x DECIMAL(8, 6),
+  completion_gyroscope_y DECIMAL(8, 6),
+  completion_gyroscope_z DECIMAL(8, 6),
+  completion_light_level DECIMAL(10, 2),
+  completion_timestamp TIMESTAMP,
+  completion_date DATE,
+  completion_time TIME,
+  
+  -- Verification
+  verified BOOLEAN DEFAULT false,
+  verified_by UUID REFERENCES users(id),
+  verification_confidence DECIMAL(4, 3),
+  verification_notes TEXT,
+  
+  INDEX idx_worker_id (worker_id),
+  INDEX idx_issue_id (issue_id),
+  INDEX idx_status (status),
+  INDEX idx_created_at (created_at),
+  INDEX idx_deadline (deadline)
+);
+```
 
-For more details, see:
-- [README.md](README.md) - Project overview
-- [SETUP.md](SETUP.md) - Setup instructions
-- [COPILOT_GUIDE.md](COPILOT_GUIDE.md) - Development guide
+### Workers Table
+
+```sql
+CREATE TABLE workers (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  
+  -- Personal Info
+  full_name VARCHAR(255) NOT NULL,
+  phone_number VARCHAR(20),
+  email VARCHAR(100),
+  
+  -- Department & Role
+  department VARCHAR(100),
+  role VARCHAR(50),
+  
+  -- Verification Status
+  verification_status VARCHAR(20), -- PENDING, VERIFIED, REJECTED
+  verification_date DATE,
+  verification_time TIME,
+  verified_by UUID REFERENCES users(id),
+  
+  -- Employment
+  hire_date DATE,
+  hire_time TIME,
+  status VARCHAR(20), -- ACTIVE, INACTIVE, ON_LEAVE
+  
+  -- Performance Metrics
+  tasks_assigned INT DEFAULT 0,
+  tasks_completed INT DEFAULT 0,
+  completion_rate DECIMAL(5, 2),
+  performance_score DECIMAL(4, 2),
+  
+  -- Location Data
+  current_latitude DECIMAL(10, 8),
+  current_longitude DECIMAL(11, 8),
+  last_location_update TIMESTAMP,
+  
+  -- Sensor Data (Last Reading)
+  last_accelerometer_x DECIMAL(8, 6),
+  last_accelerometer_y DECIMAL(8, 6),
+  last_accelerometer_z DECIMAL(8, 6),
+  last_gyroscope_x DECIMAL(8, 6),
+  last_gyroscope_y DECIMAL(8, 6),
+  last_gyroscope_z DECIMAL(8, 6),
+  last_light_level DECIMAL(10, 2),
+  last_sensor_reading_timestamp TIMESTAMP,
+  
+  -- Timeline
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_date DATE NOT NULL,
+  created_time TIME NOT NULL,
+  updated_at TIMESTAMP,
+  
+  INDEX idx_user_id (user_id),
+  INDEX idx_verification_status (verification_status),
+  INDEX idx_department (department),
+  INDEX idx_status (status)
+);
+```
+
+### User Location History Table
+
+```sql
+CREATE TABLE user_location_history (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id),
+  
+  -- Location
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  accuracy_meters DECIMAL(8, 2),
+  
+  -- Timestamp
+  timestamp TIMESTAMP NOT NULL,
+  date DATE NOT NULL,
+  time TIME NOT NULL,
+  
+  -- Sensor Readings
+  accelerometer_x DECIMAL(8, 6),
+  accelerometer_y DECIMAL(8, 6),
+  accelerometer_z DECIMAL(8, 6),
+  gyroscope_x DECIMAL(8, 6),
+  gyroscope_y DECIMAL(8, 6),
+  gyroscope_z DECIMAL(8, 6),
+  light_level DECIMAL(10, 2),
+  
+  -- Device Info
+  device_id VARCHAR(100),
+  
+  INDEX idx_user_id (user_id),
+  INDEX idx_timestamp (timestamp),
+  INDEX idx_date (date)
+);
+```
+
+### Firestore Collection Schema (NoSQL)
+
+```javascript
+// issues/{issueId}
+{
+  id: "uuid",
+  reportedBy: "uuid",
+  
+  // Classification
+  issueType: "POTHOLE",
+  severity: "HIGH",
+  status: "PENDING",
+  
+  // Location
+  location: {
+    latitude: 26.9124,
+    longitude: 75.7873,
+    address: "MG Road, Jaipur",
+    geofenceId: "uuid"
+  },
+  
+  // Image
+  image: {
+    url: "https://storage.googleapis.com/...",
+    path: "issues/uuid.jpg",
+    sizeKb: 2048,
+    dimensions: { width: 1920, height: 1080 },
+    hash: "sha256_hash"
+  },
+  
+  // Timestamps
+  createdAt: Timestamp("2024-01-15T10:30:00Z"),
+  reportedDate: "2024-01-15",
+  reportedTime: "10:30:00",
+  updatedAt: Timestamp("2024-01-15T10:35:00Z"),
+  
+  // Sensor Readings
+  sensorReadings: {
+    timestamp: Timestamp("2024-01-15T10:30:00Z"),
+    date: "2024-01-15",
+    time: "10:30:00",
+    accelerometer: {
+      x: 0.245,
+      y: -0.156,
+      z: 9.812
+    },
+    gyroscope: {
+      x: 0.015,
+      y: -0.023,
+      z: 0.008
+    },
+    magnetometer: {
+      x: 12.5,
+      y: -8.3,
+      z: 42.1
+    },
+    lightLevel: 850.5
+  },
+  
+  // EXIF Data
+  exifData: {
+    timestamp: Timestamp("2024-01-15T10:28:30Z"),
+    date: "2024-01-15",
+    time: "10:28:30",
+    camera: {
+      make: "Apple",
+      model: "iPhone 13 Pro",
+      focalLength: "4.2mm"
+    },
+    gps: {
+      latitude: 26.9124,
+      longitude: 75.7873,
+      altitude: 200.5
+    }
+  },
+  
+  // Detection
+  detection: {
+    confidence: 0.892,
+    fraudRiskScore: 0.12,
+    fraudRiskLevel: "LOW"
+  },
+  
+  // Device
+  device: {
+    id: "device-12345",
+    model: "iPhone 13 Pro",
+    make: "Apple",
+    appVersion: "1.0.0"
+  },
+  
+  // Engagement
+  engagement: {
+    upvotes: 5,
+    downvotes: 1,
+    netVotes: 4,
+    comments: 2
+  },
+  
+  // Assignment
+  assignedTo: "uuid",
+  assignedAt: Timestamp("..."),
+  priority: 8,
+  
+  // Completion
+  completedAt: Timestamp("..."),
+  verifiedAt: Timestamp("..."),
+  verificationConfidence: 0.95
+}
+
+// workers/{workerId}
+{
+  id: "uuid",
+  userId: "uuid",
+  fullName: "Rajesh Kumar",
+  phone: "+919876543210",
+  
+  // Department
+  department: "Pothole Repair",
+  role: "WORKER",
+  
+  // Verification
+  verificationStatus: "VERIFIED",
+  verificationDate: "2024-06-15",
+  verificationTime: "14:30:00",
+  
+  // Employment
+  hireDate: "2024-06-15",
+  hireTime: "09:00:00",
+  status: "ACTIVE",
+  
+  // Performance
+  tasksAssigned: 50,
+  tasksCompleted: 45,
+  completionRate: 90.0,
+  performanceScore: 9.2,
+  
+  // Location
+  currentLocation: {
+    latitude: 26.9124,
+    longitude: 75.7873,
+    lastUpdate: Timestamp("...")
+  },
+  
+  // Last Sensor Readings
+  lastSensorReading: {
+    timestamp: Timestamp("..."),
+    date: "2024-01-15",
+    time: "14:45:30",
+    accelerometer: { x: 0.1, y: 0.2, z: 9.8 },
+    gyroscope: { x: 0.01, y: 0.02, z: 0.00 },
+    lightLevel: 650.0
+  },
+  
+  // Timestamps
+  createdAt: Timestamp("2024-06-15T09:00:00Z"),
+  createdDate: "2024-06-15",
+  createdTime: "09:00:00",
+  updatedAt: Timestamp("...")
+}
+```
+
+### Data Types Reference
+
+| Field | Type | Range | Unit | Notes |
+|-------|------|-------|------|-------|
+| latitude | DECIMAL(10,8) | -90 to 90 | degrees | WGS84 standard |
+| longitude | DECIMAL(11,8) | -180 to 180 | degrees | WGS84 standard |
+| accelerometer_x/y/z | DECIMAL(8,6) | -10 to 10 | m/s² | Gravity included |
+| gyroscope_x/y/z | DECIMAL(8,6) | -360 to 360 | rad/s | Angular velocity |
+| magnetometer_x/y/z | DECIMAL(8,2) | -100 to 100 | µT (Microtesla) | Earth's field ~50µT |
+| light_level | DECIMAL(10,2) | 0 to 100000+ | lux | 0=dark, 10000=bright sunlight |
+| timestamp | TIMESTAMP | - | ISO 8601 | 2024-01-15T10:30:00Z |
+| date | DATE | - | YYYY-MM-DD | Extracted from timestamp |
+| time | TIME | - | HH:MM:SS | Extracted from timestamp |
+| confidence | DECIMAL(4,3) | 0.000 to 1.000 | - | 0=no confidence, 1=100% sure |
+
+

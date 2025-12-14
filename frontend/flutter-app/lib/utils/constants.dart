@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 
 // API Configuration
 class ApiConstants {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  // Use local machine IP for mobile/web testing (not localhost which doesn't work on mobile)
+  static const String baseUrl = 'http://192.168.137.107:8000/api/v1';
   static const String authBaseUrl = '$baseUrl/auth';
   static const String issuesBaseUrl = '$baseUrl/issues';
   static const String tasksBaseUrl = '$baseUrl/tasks';

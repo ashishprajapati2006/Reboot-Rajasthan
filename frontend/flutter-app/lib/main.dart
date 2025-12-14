@@ -1,16 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'utils/app_theme.dart';
 import 'utils/constants.dart';
 import 'services/api_service.dart';
+import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/camera/camera_screen.dart';
 import 'screens/dashboard/dashboard_screen.dart';
+import 'screens/map/live_map_screen.dart';
+import 'screens/verification/worker_verification_dashboard.dart';
 import 'screens/examples/design_system_examples.dart'; // NEW DESIGN SYSTEM
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
   ApiService().init();
   runApp(const MyApp());
 }
@@ -34,6 +44,8 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const MainNavigator(),
         '/camera': (context) => const CameraScreen(),
         '/dashboard': (context) => const DashboardScreen(),
+        '/map': (context) => const LiveMapScreen(),
+        '/worker-verification': (context) => const WorkerVerificationDashboard(),
         '/design-home': (context) => const HomeScreenExample(),
         '/design-dashboard': (context) => const DashboardScreenExample(),
         '/design-verification': (context) => const WorkerVerificationExample(),
