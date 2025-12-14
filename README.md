@@ -1,4 +1,4 @@
-# 🏛️ SAAF-SURKSHA - REBOOT RAJASTHAN
+# 🏛️ REBOOT RAJASTHAN
 
 **Civic Issue Tracking System with AI-Powered Verification & Fraud Prevention**
 
@@ -11,7 +11,7 @@
 
 ## 🎯 Project Overview
 
-SAAF-SURKSHA is an advanced civic issue management platform designed for Rajasthan state. It leverages YOLOv8 computer vision, PostGIS geospatial capabilities, and blockchain-inspired verification mechanisms to ensure transparent and accountable governance.
+REBOOT RAJASTHAN is an advanced civic issue management platform designed for Rajasthan state. It leverages YOLOv8 computer vision, PostGIS geospatial capabilities, and blockchain-inspired verification mechanisms to ensure transparent and accountable governance.
 
 ### Key Features
 
@@ -141,105 +141,6 @@ curl http://localhost:8000
 | PostgreSQL | 5432 | localhost:5432 |
 | Redis | 6379 | localhost:6379 |
 | RabbitMQ | 5672, 15672 | http://localhost:15672 |
-
----
-
-## 📚 API Documentation
-
-### Authentication Endpoints
-
-#### Register User
-```http
-POST /api/v1/auth/register
-Content-Type: application/json
-
-{
-  "phoneNumber": "+919876543210",
-  "email": "citizen@example.com",
-  "fullName": "John Doe",
-  "password": "SecurePass@123",
-  "role": "CITIZEN"
-}
-```
-
-#### Login
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "phoneNumber": "+919876543210",
-  "password": "SecurePass@123"
-}
-```
-
-#### Verify OTP
-```http
-POST /api/v1/auth/verify-otp
-Content-Type: application/json
-
-{
-  "phoneNumber": "+919876543210",
-  "otp": "123456"
-}
-```
-
-### Detection Endpoints
-
-#### Detect Civic Issue
-```http
-POST /api/v1/issues/detect
-Content-Type: multipart/form-data
-Authorization: Bearer <token>
-
-{
-  "image": <file>,
-  "latitude": 26.9124,
-  "longitude": 75.7873,
-  "device_id": "device-12345",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "detection": {
-    "detected": true,
-    "num_detections": 1,
-    "detections": [
-      {
-        "issue_type": "POTHOLE",
-        "confidence": 0.892,
-        "bbox": {"x1": 120, "y1": 200, "x2": 450, "y2": 380},
-        "area_percentage": 15.3
-      }
-    ],
-    "severity": "HIGH",
-    "fraud_risk_score": 0.12
-  },
-  "fraud_assessment": {
-    "risk_level": "LOW",
-    "risk_factors": []
-  }
-}
-```
-
-#### Verify Task Completion
-```http
-POST /api/v1/issues/verify-completion
-Content-Type: multipart/form-data
-Authorization: Bearer <token>
-
-{
-  "task_id": "uuid",
-  "before_image": <file>,
-  "after_image": <file>,
-  "latitude": 26.9124,
-  "longitude": 75.7873
-}
-```
 
 ---
 
@@ -376,17 +277,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 Built for **REBOOT RAJASTHAN Hackathon 2024**
 
-- **Team Name**: SAAF-SURKSHA
+- **Team Name**: REBOOT RAJASTHAN
 - **Track**: Governance & Civic Engagement
-
----
-
-## 📞 Support
-
-For issues and questions:
-- GitHub Issues: [Issues](https://github.com/your-org/reboot-rajasthan/issues)
-- Email: support@saaf-surksha.gov.in
-- Documentation: [Wiki](https://github.com/your-org/reboot-rajasthan/wiki)
 
 ---
 
