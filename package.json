@@ -1,0 +1,28 @@
+{
+  "name": "reboot-rajasthan-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend/auth-service",
+    "backend/task-service",
+    "backend/geofence-service",
+    "backend/rti-service",
+    "backend/analytics-service"
+  ],
+  "scripts": {
+    "start": "docker-compose up -d",
+    "stop": "docker-compose down",
+    "logs": "docker-compose logs -f",
+    "test": "npm run test --workspaces",
+    "dev:auth": "cd backend/auth-service && npm run dev",
+    "dev:detection": "cd backend/detection-service && python -m uvicorn main:app --reload",
+    "dev:task": "cd backend/task-service && npm run dev",
+    "build": "docker-compose build",
+    "db:migrate": "docker-compose exec postgres psql -U postgres -d saaf_surksha -f /docker-entrypoint-initdb.d/001_initial_schema.sql",
+    "clean": "docker-compose down -v"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1"
+  }
+}
